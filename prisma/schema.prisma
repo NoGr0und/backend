@@ -25,6 +25,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   clients Client[]
+  leads   Lead[]
 }
 
 model Client {
@@ -36,4 +37,20 @@ model Client {
 
   userId String
   User   User   @relation(fields: [userId], references: [id])
+
+  leads Lead[]
+}
+
+model Lead {
+  id        String   @id @default(uuid())
+  title     String
+  value     Float?
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 }

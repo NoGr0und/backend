@@ -4,7 +4,7 @@ import fastifyjwt from '@fastify/jwt';
 import { userRoutes } from './modules/users/user.routes';
 import { authRoutes } from './modules/auth/auth.routes';
 import { clientRoutes } from './modules/clients/client.routes';
-
+import { leadRoutes } from './modules/leads/leads.routes';
 
 export const app = Fastfy({
     logger: true,
@@ -13,6 +13,7 @@ export const app = Fastfy({
 app.register(fastifyjwt, { secret: process.env.JWT_SECRET!, });
 app.register(userRoutes, { prefix: '/user' });
 app.register(clientRoutes);
+app.register(leadRoutes);
 app.register(authRoutes, { prefix: '/auth' });
 
 
