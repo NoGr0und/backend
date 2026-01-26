@@ -26,6 +26,8 @@ model User {
 
   clients Client[]
   leads   Lead[]
+  tasks   Task[]
+  notes   Note[]
 }
 
 model Client {
@@ -39,6 +41,7 @@ model Client {
   User   User   @relation(fields: [userId], references: [id])
 
   leads Lead[]
+  notes Note[]
 }
 
 model Lead {
@@ -53,4 +56,51 @@ model Lead {
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
+  tasks  Task[]
+  notes  Note[]
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String
+  type        TaskType
+  status      TaskStatus @default(PENDING)
+  dueDate     DateTime
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+enum TaskStatus {
+  PENDING
+  DONE
+}
+
+enum TaskType {
+  CALL
+  EMAIL
+  MEETING
+  FOLLOW_UP
+}
+
+model Note {
+  id      String @id @default(uuid())
+  content String
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
 }
