@@ -26,6 +26,7 @@ export class LeadController {
             where: {
                 id: clientId,
                 userId,
+                deletedAt: null,
             },
         });
 
@@ -45,13 +46,60 @@ export class LeadController {
     
     async list(request: FastifyRequest, reply: FastifyReply) {
         const user = request.user as {sub: string};
-        return service.listByUser(user.sub);
+        const { search, page = "1", limit = "10" } = request.query as {
+            search?: string;
+            page?: string;
+            limit?: string;
+        };
+
+        const parsedPage = Number(page);
+        const parsedLimit = Number(limit);
+        if (!Number.isInteger(parsedPage) || parsedPage < 1) {
+            return reply.status(400).send({ error: "Invalid page parameter" });
+        }
+        if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
+            return reply.status(400).send({ error: "Invalid limit parameter" });
+        }
+        if (parsedLimit > 50) {
+            return reply.status(400).send({ error: "Limit must be at most 50" });
+        }
+
+        return service.listByUser(
+            user.sub,
+            search?.trim() || undefined,
+            parsedPage,
+            parsedLimit
+        );
     }
 
     async listByClient(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as {id: string};
         const user = request.user as {sub: string};
-        return service.listByClient(id, user.sub);
+        const { search, page = "1", limit = "10" } = request.query as {
+            search?: string;
+            page?: string;
+            limit?: string;
+        };
+
+        const parsedPage = Number(page);
+        const parsedLimit = Number(limit);
+        if (!Number.isInteger(parsedPage) || parsedPage < 1) {
+            return reply.status(400).send({ error: "Invalid page parameter" });
+        }
+        if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
+            return reply.status(400).send({ error: "Invalid limit parameter" });
+        }
+        if (parsedLimit > 50) {
+            return reply.status(400).send({ error: "Limit must be at most 50" });
+        }
+
+        return service.listByClient(
+            id,
+            user.sub,
+            search?.trim() || undefined,
+            parsedPage,
+            parsedLimit
+        );
     }
 
     async updateStatus(request: FastifyRequest, reply: FastifyReply) {
@@ -69,7 +117,20 @@ export class LeadController {
             return reply.status(404).send({ error: "Lead not found" });
         }
 
-        const updatedLead = await service.updateStatus(id, status);
+        const updatedLead = await service.updateStatus(id, user.sub, status);
         return reply.send(updatedLead);
+    }
+
+    async delete(request: FastifyRequest, reply: FastifyReply) {
+        const { id } = request.params as {id: string};
+        const user = request.user as {sub: string};
+
+        const lead = await service.findById(id, user.sub);
+        if(!lead) {
+            return reply.status(404).send({ error: "Lead not found" });
+        }
+
+        await service.softDelete(id, user.sub);
+        return reply.status(200).send({ message: "Lead deleted successfully" });
     }
 }  

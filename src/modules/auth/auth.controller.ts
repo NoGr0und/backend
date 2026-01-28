@@ -16,8 +16,7 @@ export class AuthController {
             const result = await this.authService.login(email, password);
             return reply.send(result);
         } catch (error) {
-            return console.log(email, password, "aqui"), 
-            reply.code(401).send({ message: 'Email ou senha Invalidos' });
+            return reply.code(401).send({ message: 'Email ou senha Invalidos' });
         }
     }
 } 

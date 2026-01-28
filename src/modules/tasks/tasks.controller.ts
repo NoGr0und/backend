@@ -9,7 +9,6 @@ export class TaskController {
         const {title, description, type, dueDate, leadId} = 
         request.body as any;
         const user = request.user as {sub: string,}
-        const userId = user.sub
 
         const task = await taskService.create({
             title,
@@ -25,14 +24,12 @@ export class TaskController {
 
     async list(request: FastifyRequest) {
         const user = request.user as {sub: string}
-        const userId = user.sub
 
         return taskService.listByUser(user.sub)
     }
 
     async listByLead(request: FastifyRequest){
         const user = request.user as {sub: string}
-        const userId = user.sub
 
         const { id } = request.params as { id: string,};
         return taskService.listByLead(id, user.sub)
@@ -41,8 +38,7 @@ export class TaskController {
     async markDone(request: FastifyRequest) {
         const { id } = request.params as { id: string,};
         const user = request.user as {sub: string,}
-        const userId = user.sub
 
-        return taskService.markAsDone(id, userId);
+        return taskService.markAsDone(id, user.sub);
     }
 }

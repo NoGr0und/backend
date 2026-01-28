@@ -8,6 +8,8 @@ import { leadRoutes } from './modules/leads/leads.routes';
 import { taskRoutes } from './modules/tasks/tasks.routes';
 import { noteRoutes } from './modules/notes/notes.routes';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes';
+import { authMiddleware } from './middlewares/auth.middleware';
+import { UserController } from './modules/users/user.controller';
 
 export const app = Fastfy({
     logger: true,
@@ -22,6 +24,10 @@ app.register(authRoutes, { prefix: '/auth' });
 app.register(noteRoutes);
 app.register(dashboardRoutes);
 
+const userController = new UserController();
+app.get('/me', { preHandler: authMiddleware }, (request, reply) => {
+    return userController.me(request, reply);
+});
 
 app.get('/health', async () => {
     return { status: 'ok'};

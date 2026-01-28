@@ -8,14 +8,12 @@ export class AuthService {
         })
 
         if (!user) {
-            console.log('Usuario nao encontrado para o email:');
             throw new Error('Email invalido')
         }
 
         const passwordMatch = await bcrypt.compare(password, user.password)
 
         if (!passwordMatch) {
-            console.log('Senha incorreta para o email:');
             throw new Error('senha invalida')
         }
 

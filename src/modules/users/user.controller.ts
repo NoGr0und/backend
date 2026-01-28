@@ -5,7 +5,6 @@ const userService = new UserService();
 
 export class UserController {
     async createUser(request: FastifyRequest, reply: FastifyReply) {
-        console.log(request.body);
         const { name, email, password } = request.body as {
             name: string;
             email: string;
@@ -13,6 +12,17 @@ export class UserController {
         };
         const user = await userService.createUser({ name, email, password });
         return reply.code(201).send(user);
+    }
+
+    async me(request: FastifyRequest, reply: FastifyReply) {
+        const user = request.user as { sub: string };
+        const me = await userService.getMe(user.sub);
+
+        if (!me) {
+            return reply.status(404).send({ message: "User not found" });
+        }
+
+        return reply.send(me);
     }
     async list(request: FastifyRequest, reply: FastifyReply) {
         const users = await userService.listUsers();

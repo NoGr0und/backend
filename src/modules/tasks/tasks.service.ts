@@ -68,9 +68,17 @@ export class TaskService {
             throw new Error('Task nao encontrada');
         }
 
-        return prisma.task.update({
-            where: { id: taskId},
+        const updated = await prisma.task.updateMany({
+            where: { id: taskId, userId },
             data: { status: 'DONE'},
+        });
+
+        if (updated.count === 0) {
+            throw new Error('Task nao encontrada');
+        }
+
+        return prisma.task.findFirst({
+            where: { id: taskId, userId },
         });
     }
 }

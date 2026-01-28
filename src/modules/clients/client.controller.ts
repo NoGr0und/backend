@@ -1,7 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { ClientService } from "./client.service";
-import { request } from "node:http";
-
 const service = new ClientService();
 
 export class ClientController {
@@ -22,11 +20,33 @@ export class ClientController {
 
   }
 
-  async list(request: FastifyRequest) {
+  async list(request: FastifyRequest, reply: FastifyReply) {
     const user = request.user as { sub: string; role: string };
     const userId = user.sub;
+    const { search, page = "1", limit = "10" } = request.query as {
+      search?: string;
+      page?: string;
+      limit?: string;
+    };
 
-    return service.listByUser(userId);
+    const parsedPage = Number(page);
+    const parsedLimit = Number(limit);
+    if (!Number.isInteger(parsedPage) || parsedPage < 1) {
+      return reply.status(400).send({ message: "Invalid page parameter" });
+    }
+    if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
+      return reply.status(400).send({ message: "Invalid limit parameter" });
+    }
+    if (parsedLimit > 50) {
+      return reply.status(400).send({ message: "Limit must be at most 50" });
+    }
+
+    return service.listByUser(
+      userId,
+      search?.trim() || undefined,
+      parsedPage,
+      parsedLimit
+    );
   }
 
   async update(request: FastifyRequest, reply: FastifyReply) {
@@ -39,7 +59,7 @@ export class ClientController {
     return reply.status(404).send({ message: "Client not found" });
   }
 
-  const updatedClient = await service.update(id, request.body as any);
+  const updatedClient = await service.update(id, userId, request.body as any);
   return reply.status(200).send(updatedClient);
   }
 
@@ -53,7 +73,7 @@ async delete (request: FastifyRequest, reply: FastifyReply) {
     return reply.status(404).send({ message: "Client not found" });
   }
 
-  await service.delete(id);
+  await service.delete(id, userId);
   return reply.status(200).send({ message: "Client deleted successfully" });
  }
 }

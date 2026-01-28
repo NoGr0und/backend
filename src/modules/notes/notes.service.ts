@@ -18,6 +18,7 @@ export class NoteService {
         where: {
           id: data.leadId,
           userId: data.userId,
+          deletedAt: null,
         },
       });
 
@@ -31,6 +32,7 @@ export class NoteService {
         where: {
           id: data.clientId,
           userId: data.userId,
+          deletedAt: null,
         },
       });
 
@@ -56,26 +58,67 @@ export class NoteService {
     });
   }
 
-  async listByLead(leadId: string, userId: string) {
+  async listByLead(leadId: string, userId: string, search?: string, page = 1, limit = 10) {
+    const where: { leadId: string; userId: string; deletedAt: Date | null; content?: { contains: string; mode: "insensitive" } } = {
+      leadId,
+      userId,
+      deletedAt: null,
+    };
+
+    if (search) {
+      where.content = { contains: search, mode: "insensitive" };
+    }
+
+    const skip = (page - 1) * limit;
+
     return prisma.note.findMany({
-      where: {
-        leadId,
-        userId,
-      },
+      where,
+      skip,
+      take: limit,
       orderBy: {
         createdAt: 'desc',
       },
     });
   }
 
-  async listByClient(clientId: string, userId: string) {
+  async listByClient(clientId: string, userId: string, search?: string, page = 1, limit = 10) {
+    const where: { clientId: string; userId: string; deletedAt: Date | null; content?: { contains: string; mode: "insensitive" } } = {
+      clientId,
+      userId,
+      deletedAt: null,
+    };
+
+    if (search) {
+      where.content = { contains: search, mode: "insensitive" };
+    }
+
+    const skip = (page - 1) * limit;
+
     return prisma.note.findMany({
-      where: {
-        clientId,
-        userId,
-      },
+      where,
+      skip,
+      take: limit,
       orderBy: {
         createdAt: 'desc',
+      },
+    });
+  }
+
+  async findById(noteId: string, userId: string) {
+    return prisma.note.findFirst({
+      where: {
+        id: noteId,
+        userId,
+        deletedAt: null,
+      },
+    });
+  }
+
+  async softDelete(noteId: string, userId: string) {
+    return prisma.note.updateMany({
+      where: { id: noteId, userId, deletedAt: null },
+      data: {
+        deletedAt: new Date(),
       },
     });
   }

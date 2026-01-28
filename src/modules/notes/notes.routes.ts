@@ -8,6 +8,7 @@ export async function noteRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authMiddleware);
 
   app.post('/notes', controller.create);
-  app.get('/leads/:id/notes', controller.listByLead);
-  app.get('/clients/:id/notes', controller.listByClient);
+  app.get('/leads/:id/notes', (request, reply) => controller.listByLead(request, reply));
+  app.get('/clients/:id/notes', (request, reply) => controller.listByClient(request, reply));
+  app.delete('/notes/:id', controller.delete);
 }

@@ -16,7 +16,7 @@ export async function clientRoutes(app: FastifyInstance) {
   app.get(
     "/clients",
     { preHandler: [authMiddleware] },
-    (request) => controller.list(request)
+    (request, reply) => controller.list(request, reply)
 );
 
   app.put(

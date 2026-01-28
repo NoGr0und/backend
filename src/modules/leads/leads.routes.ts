@@ -22,4 +22,8 @@ const controller = new LeadController();
     app.patch('/leads/:id/status', {preHandler: authMiddleware},
         (request, reply) => controller.updateStatus(request, reply)
     );
+
+    app.delete('/leads/:id', {preHandler: authMiddleware},
+        (request, reply) => controller.delete(request, reply)
+    );
 }

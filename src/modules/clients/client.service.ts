@@ -17,11 +17,22 @@ export class ClientService {
         });
         return client;
     }
-    async listByUser(userId: string) {
+    async listByUser(userId: string, search?: string, page = 1, limit = 10) {
+    const where: { userId: string; deletedAt: Date | null; name?: { contains: string; mode: "insensitive" } } = {
+        userId,
+        deletedAt: null,
+    };
+
+    if (search) {
+        where.name = { contains: search, mode: "insensitive" };
+    }
+
+    const skip = (page - 1) * limit;
+
     return prisma.client.findMany({
-        where: {
-            userId,
-            },
+        where,
+        skip,
+        take: limit,
         orderBy: {
             createdAt: 'desc',
             },
@@ -33,24 +44,36 @@ export class ClientService {
             where: {
                 id: clientId,
                 userId,
+                deletedAt: null,
             },
         });
     }
 
-    async update(id: string, data: {
+    async update(id: string, userId: string, data: {
         name?: string;
         email?: string;
         phone?: string;
     }) {
-        return prisma.client.update({
-            where: { id },
+        const updated = await prisma.client.updateMany({
+            where: { id, userId, deletedAt: null },
             data,
+        });
+
+        if (updated.count === 0) {
+            return null;
+        }
+
+        return prisma.client.findFirst({
+            where: { id, userId, deletedAt: null },
         });
     }
 
-    async delete(id: string) {
-        await prisma.client.delete({
-            where: { id },
+    async delete(id: string, userId: string) {
+        await prisma.client.updateMany({
+            where: { id, userId, deletedAt: null },
+            data: {
+                deletedAt: new Date(),
+            },
         });
     }
 }
