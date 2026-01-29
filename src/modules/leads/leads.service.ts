@@ -1,5 +1,7 @@
 import { prisma } from "../../lib/prisma";
 
+type AuthUser = { sub: string; role: string; companyId?: string | null };
+
 export class LeadService {
     async create(data: {
         title: string;
@@ -7,17 +9,28 @@ export class LeadService {
         status: string;
         clientId: string;
         userId: string;
+        companyId: string;
     }) {
         return prisma.lead.create({
             data,
         });
     }
 
-    async listByUser(userId: string, search?: string, page = 1, limit = 10) {
-        const where: { userId: string; deletedAt: Date | null; title?: { contains: string; mode: "insensitive" } } = {
-            userId,
+    async listVisible(user: AuthUser, search?: string, page = 1, limit = 10) {
+        if (!user.companyId) throw new Error("User sem empresa");
+        const where: {
+            companyId: string;
+            userId?: string;
+            deletedAt: Date | null;
+            title?: { contains: string; mode: "insensitive" };
+        } = {
+            companyId: user.companyId,
             deletedAt: null,
         };
+
+        if (user.role !== "ADMIN") {
+            where.userId = user.sub;
+        }
 
         if (search) {
             where.title = { contains: search, mode: "insensitive" };
@@ -32,15 +45,29 @@ export class LeadService {
             orderBy: {
                 createdAt: 'desc',
             },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+            },
         });
     }
 
-    async listByClient(clientId: string, userId: string, search?: string, page = 1, limit = 10) {
-        const where: { clientId: string; userId: string; deletedAt: Date | null; title?: { contains: string; mode: "insensitive" } } = {
+    async listByClientVisible(user: AuthUser, clientId: string, search?: string, page = 1, limit = 10) {
+        if (!user.companyId) throw new Error("User sem empresa");
+        const where: {
+            clientId: string;
+            companyId: string;
+            userId?: string;
+            deletedAt: Date | null;
+            title?: { contains: string; mode: "insensitive" };
+        } = {
             clientId,
-            userId,
+            companyId: user.companyId,
             deletedAt: null,
         };
+
+        if (user.role !== "ADMIN") {
+            where.userId = user.sub;
+        }
 
         if (search) {
             where.title = { contains: search, mode: "insensitive" };
@@ -52,22 +79,36 @@ export class LeadService {
             where,
             skip,
             take: limit,
-        });
-    }
-
-    async findById(leadId: string, userId: string) {
-        return prisma.lead.findFirst({
-            where: {
-                id: leadId,
-                userId,
-                deletedAt: null,
+            include: {
+                user: { select: { id: true, name: true, email: true } },
             },
         });
     }
 
-    async updateStatus(id: string, userId: string, status: string) {
+    async findByIdVisible(leadId: string, user: AuthUser) {
+        if (!user.companyId) throw new Error("User sem empresa");
+        return prisma.lead.findFirst({
+            where: {
+                id: leadId,
+                companyId: user.companyId,
+                ...(user.role !== "ADMIN" ? { userId: user.sub } : {}),
+                deletedAt: null,
+            },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+            },
+        });
+    }
+
+    async updateStatusVisible(user: AuthUser, id: string, status: string) {
+        if (!user.companyId) throw new Error("User sem empresa");
         const updated = await prisma.lead.updateMany({
-            where: { id, userId, deletedAt: null },
+            where: {
+                id,
+                companyId: user.companyId,
+                ...(user.role !== "ADMIN" ? { userId: user.sub } : {}),
+                deletedAt: null,
+            },
             data: { status },
         });
 
@@ -76,13 +117,27 @@ export class LeadService {
         }
 
         return prisma.lead.findFirst({
-            where: { id, userId, deletedAt: null },
+            where: {
+                id,
+                companyId: user.companyId,
+                ...(user.role !== "ADMIN" ? { userId: user.sub } : {}),
+                deletedAt: null,
+            },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+            },
         });
     }
 
-    async softDelete(id: string, userId: string) {
+    async softDeleteVisible(user: AuthUser, id: string) {
+        if (!user.companyId) throw new Error("User sem empresa");
         return prisma.lead.updateMany({
-            where: { id, userId, deletedAt: null },
+            where: {
+                id,
+                companyId: user.companyId,
+                ...(user.role !== "ADMIN" ? { userId: user.sub } : {}),
+                deletedAt: null,
+            },
             data: {
                 deletedAt: new Date(),
             },

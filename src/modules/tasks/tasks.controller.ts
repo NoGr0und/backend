@@ -16,7 +16,7 @@ export class TaskController {
             type,
             dueDate: new Date(dueDate),
             leadId,
-            userId,
+            userId: user.sub,
         });
 
         return reply.status(201).send(task);

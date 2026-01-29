@@ -18,7 +18,7 @@ export class AuthService {
         }
 
         const token = jwt.sign(
-            { role: user.role, sub: user.id, email: user.email },
+            { role: user.role, sub: user.id, email: user.email, companyId: user.companyId },
             process.env.JWT_SECRET!,
             { expiresIn: '1d' }
         );
@@ -28,7 +28,8 @@ export class AuthService {
             user: {
                 id: user.id,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                companyId: user.companyId
             },
         }
     }

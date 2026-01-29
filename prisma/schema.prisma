@@ -13,6 +13,19 @@ datasource db {
   provider = "postgresql"
 }
 
+model Company {
+  id   String @id @default(uuid())
+  name String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users   User[]
+  clients Client[]
+  leads   Lead[]
+  notes   Note[]
+}
+
 model User {
   id       String  @id @default(uuid())
   name     String
@@ -20,6 +33,12 @@ model User {
   password String
   role     String  @default("USER")
   isActive Boolean @default(true)
+  lastSeenAt DateTime?
+
+  // TEMPORÁRIO: opcional para não quebrar dados existentes.
+  // Depois de backfill, vamos tornar obrigatório.
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -38,11 +57,17 @@ model Client {
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
   userId String
   User   User   @relation(fields: [userId], references: [id])
 
   leads Lead[]
   notes Note[]
+
+  @@index([companyId])
+  @@index([companyId, userId])
 }
 
 model Lead {
@@ -53,6 +78,9 @@ model Lead {
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
   clientId String
   client   Client @relation(fields: [clientId], references: [id])
 
@@ -60,6 +88,9 @@ model Lead {
   user   User   @relation(fields: [userId], references: [id])
   tasks  Task[]
   notes  Note[]
+
+  @@index([companyId])
+  @@index([companyId, userId])
 }
 
 model Task {
@@ -95,6 +126,9 @@ model Note {
   id      String @id @default(uuid())
   content String
 
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
   leadId String?
   lead   Lead?   @relation(fields: [leadId], references: [id])
 
@@ -106,4 +140,7 @@ model Note {
 
   createdAt DateTime  @default(now())
   deletedAt DateTime?
+
+  @@index([companyId])
+  @@index([companyId, userId])
 }

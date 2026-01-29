@@ -1,11 +1,14 @@
 import { prisma } from "../../lib/prisma";
 
+type AuthUser = { sub: string; role: string; companyId?: string | null };
+
 export class ClientService {
     async create(data: {
         name: string;
         email?: string;
         phone?: string;
         userId: string;
+        companyId: string;
     }) {
         const client = await prisma.client.create({
             data: {
@@ -13,15 +16,28 @@ export class ClientService {
                 email: data.email,
                 phone: data.phone,
                 userId: data.userId,
+                companyId: data.companyId,
             },
         });
         return client;
     }
-    async listByUser(userId: string, search?: string, page = 1, limit = 10) {
-    const where: { userId: string; deletedAt: Date | null; name?: { contains: string; mode: "insensitive" } } = {
-        userId,
+    async listVisible(user: AuthUser, search?: string, page = 1, limit = 10) {
+    if (!user.companyId) {
+        throw new Error("User sem empresa");
+    }
+    const where: {
+        companyId: string;
+        userId?: string;
+        deletedAt: Date | null;
+        name?: { contains: string; mode: "insensitive" };
+    } = {
+        companyId: user.companyId,
         deletedAt: null,
     };
+
+    if (user.role !== "ADMIN") {
+        where.userId = user.sub;
+    }
 
     if (search) {
         where.name = { contains: search, mode: "insensitive" };
@@ -36,26 +52,48 @@ export class ClientService {
         orderBy: {
             createdAt: 'desc',
             },
+        include: {
+            User: {
+                select: { id: true, name: true, email: true },
+            },
+        },
         });
     }
 
-    async findById(clientId: string, userId: string) {
+    async findByIdVisible(clientId: string, user: AuthUser) {
+        if (!user.companyId) {
+            throw new Error("User sem empresa");
+        }
         return prisma.client.findFirst({
             where: {
                 id: clientId,
-                userId,
+                companyId: user.companyId,
+                ...(user.role !== "ADMIN" ? { userId: user.sub } : {}),
                 deletedAt: null,
+            },
+            include: {
+                User: {
+                    select: { id: true, name: true, email: true },
+                },
             },
         });
     }
 
-    async update(id: string, userId: string, data: {
+    async updateVisible(id: string, user: AuthUser, data: {
         name?: string;
         email?: string;
         phone?: string;
     }) {
+        if (!user.companyId) {
+            throw new Error("User sem empresa");
+        }
         const updated = await prisma.client.updateMany({
-            where: { id, userId, deletedAt: null },
+            where: {
+                id,
+                companyId: user.companyId,
+                ...(user.role !== "ADMIN" ? { userId: user.sub } : {}),
+                deletedAt: null,
+            },
             data,
         });
 
@@ -64,13 +102,31 @@ export class ClientService {
         }
 
         return prisma.client.findFirst({
-            where: { id, userId, deletedAt: null },
+            where: {
+                id,
+                companyId: user.companyId,
+                ...(user.role !== "ADMIN" ? { userId: user.sub } : {}),
+                deletedAt: null,
+            },
+            include: {
+                User: {
+                    select: { id: true, name: true, email: true },
+                },
+            },
         });
     }
 
-    async delete(id: string, userId: string) {
+    async deleteVisible(id: string, user: AuthUser) {
+        if (!user.companyId) {
+            throw new Error("User sem empresa");
+        }
         await prisma.client.updateMany({
-            where: { id, userId, deletedAt: null },
+            where: {
+                id,
+                companyId: user.companyId,
+                ...(user.role !== "ADMIN" ? { userId: user.sub } : {}),
+                deletedAt: null,
+            },
             data: {
                 deletedAt: new Date(),
             },

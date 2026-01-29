@@ -14,8 +14,12 @@ export class LeadController {
             status?: string;
             clientId: string;
         };
-        const user = request.user as {sub: string};
+        const user = request.user as { sub: string; role: string; companyId?: string | null };
         const userId = user.sub;
+        const companyId = user.companyId;
+        if (!companyId) {
+            return reply.status(400).send({ error: "User sem empresa" });
+        }
 
         if(!title) {
             return reply.status(400).send({ error: "Title is required" });
@@ -25,7 +29,8 @@ export class LeadController {
         const client = await prisma.client.findFirst({
             where: {
                 id: clientId,
-                userId,
+                companyId,
+                ...(user.role !== "ADMIN" ? { userId } : {}),
                 deletedAt: null,
             },
         });
@@ -40,12 +45,13 @@ export class LeadController {
             status: status ?? 'NEW',
             clientId,
             userId,
+            companyId,
         });
         return reply.status(201).send(lead);
     }
     
     async list(request: FastifyRequest, reply: FastifyReply) {
-        const user = request.user as {sub: string};
+        const user = request.user as { sub: string; role: string; companyId?: string | null };
         const { search, page = "1", limit = "10" } = request.query as {
             search?: string;
             page?: string;
@@ -64,8 +70,8 @@ export class LeadController {
             return reply.status(400).send({ error: "Limit must be at most 50" });
         }
 
-        return service.listByUser(
-            user.sub,
+        return service.listVisible(
+            user,
             search?.trim() || undefined,
             parsedPage,
             parsedLimit
@@ -74,7 +80,7 @@ export class LeadController {
 
     async listByClient(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as {id: string};
-        const user = request.user as {sub: string};
+        const user = request.user as { sub: string; role: string; companyId?: string | null };
         const { search, page = "1", limit = "10" } = request.query as {
             search?: string;
             page?: string;
@@ -93,9 +99,9 @@ export class LeadController {
             return reply.status(400).send({ error: "Limit must be at most 50" });
         }
 
-        return service.listByClient(
+        return service.listByClientVisible(
+            user,
             id,
-            user.sub,
             search?.trim() || undefined,
             parsedPage,
             parsedLimit
@@ -105,32 +111,32 @@ export class LeadController {
     async updateStatus(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as {id: string};
         const { status } = request.body as {status: string};
-        const user = request.user as {sub: string};
+        const user = request.user as { sub: string; role: string; companyId?: string | null };
 
         if(!status || !VALID_STATUS.includes(status)) {
             return reply.status(400).send({ error: "Invalid status" });
         }
 
-        const lead = await service.findById(id, user.sub);
+        const lead = await service.findByIdVisible(id, user);
 
         if(!lead) {
             return reply.status(404).send({ error: "Lead not found" });
         }
 
-        const updatedLead = await service.updateStatus(id, user.sub, status);
+        const updatedLead = await service.updateStatusVisible(user, id, status);
         return reply.send(updatedLead);
     }
 
     async delete(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as {id: string};
-        const user = request.user as {sub: string};
+        const user = request.user as { sub: string; role: string; companyId?: string | null };
 
-        const lead = await service.findById(id, user.sub);
+        const lead = await service.findByIdVisible(id, user);
         if(!lead) {
             return reply.status(404).send({ error: "Lead not found" });
         }
 
-        await service.softDelete(id, user.sub);
+        await service.softDeleteVisible(user, id);
         return reply.status(200).send({ message: "Lead deleted successfully" });
     }
 }  

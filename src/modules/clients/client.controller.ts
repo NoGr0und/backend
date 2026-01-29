@@ -6,23 +6,26 @@ export class ClientController {
   async create(request: FastifyRequest, reply: FastifyReply) {
    const {name, email, phone } = request.body as any;
 
-   const user = request.user as { sub: string; role: string };
+   const user = request.user as { sub: string; role: string; companyId?: string | null };
    const userId = user.sub;
+   const companyId = user.companyId;
+   if (!companyId) {
+     return reply.status(400).send({ message: "User sem empresa" });
+   }
 
    if (!name) {
      return reply.status(400).send({ message: "Name is required" });
    }
 
    const client = await service.create(
-    { name, email, phone, userId });
+    { name, email, phone, userId, companyId });
 
    return reply.status(201).send(client);
 
   }
 
   async list(request: FastifyRequest, reply: FastifyReply) {
-    const user = request.user as { sub: string; role: string };
-    const userId = user.sub;
+    const user = request.user as { sub: string; role: string; companyId?: string | null };
     const { search, page = "1", limit = "10" } = request.query as {
       search?: string;
       page?: string;
@@ -41,8 +44,8 @@ export class ClientController {
       return reply.status(400).send({ message: "Limit must be at most 50" });
     }
 
-    return service.listByUser(
-      userId,
+    return service.listVisible(
+      user,
       search?.trim() || undefined,
       parsedPage,
       parsedLimit
@@ -51,29 +54,27 @@ export class ClientController {
 
   async update(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as { id: string };
-  const user = request.user as { sub: string; role: string };
-  const userId = user.sub;
+  const user = request.user as { sub: string; role: string; companyId?: string | null };
 
-  const clientExist = await service.findById(id, userId);
+  const clientExist = await service.findByIdVisible(id, user);
   if (!clientExist) {
     return reply.status(404).send({ message: "Client not found" });
   }
 
-  const updatedClient = await service.update(id, userId, request.body as any);
+  const updatedClient = await service.updateVisible(id, user, request.body as any);
   return reply.status(200).send(updatedClient);
   }
 
 async delete (request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as { id: string };
-  const user = request.user as { sub: string; role: string };
-  const userId = user.sub;
+  const user = request.user as { sub: string; role: string; companyId?: string | null };
 
-  const clientExist = await service.findById(id, userId);
+  const clientExist = await service.findByIdVisible(id, user);
   if (!clientExist) {
     return reply.status(404).send({ message: "Client not found" });
   }
 
-  await service.delete(id, userId);
+  await service.deleteVisible(id, user);
   return reply.status(200).send({ message: "Client deleted successfully" });
  }
 }
